@@ -22,7 +22,7 @@ plt.ion()
 
 model = torch.load('best_152_v2.pt')
 
-data_dir = '/home/ubuntu/jd_ai/data/test'
+data_dir = '/home/ubuntu/jd_ai/data'
 
 preprocess_1 = transforms.Compose([
     			transforms.Resize(400),
@@ -38,10 +38,10 @@ preprocess_2 = transforms.Compose([
 
 counter = 0
 
-for file in os.listdir(data_dir + '/val/1'):
+for file in os.listdir(data_dir + '/train/1'):
 	print(counter)
 	counter = counter + 1
-	im = Image.open(data_dir + '/val/1/' + file)
+	im = Image.open(data_dir + '/train/1/' + file)
 	
 	im_tensor_1 = preprocess_1(im)
 	im_input_1 = Variable(im_tensor_1.cuda())
@@ -68,7 +68,7 @@ for file in os.listdir(data_dir + '/val/1'):
 	output.data[0][idx.data] = 0.3
 
 	for i in range(30):
-		result = open('result_v2.csv', 'a')
+		result = open('train.csv', 'a')
 		name = str(file)[:-4]
 		res = name + ',' + str(i+1) + ',' + str(format(output.data[0][i], '.10f')) + '\n'
 		result.write(res)

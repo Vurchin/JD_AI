@@ -20,17 +20,18 @@ plt.ion()
 model_sel = {
 	'inception': torchvision.models.inception.inception_v3(pretrained=True),
 	'resnet152': resnet.resnet152(pretrained=True),
-	'resnet101': torchvision.models.resnet.resnet101(pretrained=True),
+	'resnet101': resnet.resnet101(pretrained=True),
+	'resnet50': resnet.resnet50(pretrained=True),
 }
 
 args = {
 	# arch params
 	'data_dir': '/home/ubuntu/jd_ai/data3',
 	'test_data_dir': '/home/ubuntu/jd_ai/data/test',
-	'model_name': 'resnet152',
+	'model_name': 'resnet50',
 	'input_size': 400,
 	'output_size': 30,
-	'batch_size': 16,
+	'batch_size': 32,
 	'requires_grad': True,
 	'use_gpu': torch.cuda.is_available(),
 
@@ -98,9 +99,6 @@ def model_tools(args=args):
         
 	return (model_conv, optimizer_conv, poly_lr_scheduler)
 
-def poly_lr(epoch):
-        return (1-(epoch/args['epoch']))^0.9
-
 def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2, data_sizes_2):
 	since = time.time()
 
@@ -108,6 +106,7 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 
 	best_model = model.state_dict()
 	best_acc = 0.0
+	best_loss = 100.0
 
 	for epoch in range(args['epoch']):
 		print('Epoch {}/{}'.format(epoch, args['epoch'] - 1))
@@ -122,7 +121,6 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 		running_acc = 0
 
 		for data in dataloader_1['train']:
-
 			inputs, labels = data
 
 			if args['use_gpu']:
@@ -149,7 +147,7 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 
 			running_loss += loss.data[0]
 			running_acc += torch.sum(preds == labels.data)
-
+			
 		epoch_loss = running_loss / data_sizes_1['train']
 		epoch_acc = running_acc / data_sizes_1['train']
 
@@ -158,13 +156,14 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 		print('finished this epoch in ',time.time() - time_epoch,'seconds')
 		print()
 
-		this_acc = model_eval(model, dataloader_2, data_sizes_2)
+		this_acc, this_loss = model_eval(model, dataloader_2, data_sizes_2)
 
-		if (this_acc > best_acc):
-			best_acc = this_acc
+		if (this_loss < best_loss):
+			best_loss = this_loss
 			best_model = model.state_dict()
 
 		print('Validation Acc: ',this_acc)
+		print('Validation Loss: ',this_loss)
 
 	time_elapsed = time.time() - since
 	print('Training complete in {:.0f}m {:.0f}s'.format(
@@ -177,7 +176,10 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 def model_eval(model, dataloader_2, data_sizes_2):
 	model.train(False)
 
+	loss_func = args['loss_fun']
+
 	running_acc = 0.0
+	running_loss = 0.0
 
 	for data in dataloader_2['val']:
 		inputs, labels = data
@@ -192,12 +194,14 @@ def model_eval(model, dataloader_2, data_sizes_2):
 		outputs = model(inputs)
 
 		_, preds = torch.max(outputs.data, 1)
+		loss = loss_func(outputs, labels)
 
 		running_acc += torch.sum(preds == labels.data)
+		running_loss += loss.data[0]
 
 	acc = running_acc / data_sizes_2['val']
-
-	return acc
+	loss = running_loss / data_sizes_2['val']
+	return acc, loss
 
 def model_test(model, data_dir=args['test_data_dir']):
 	model.train(False)
@@ -227,4 +231,4 @@ if __name__ == '__main__':
 	dataloader_1, data_sizes_1, dataloader_2, data_sizes_2 = data_load()
 	model, optimizer, scheduler = model_tools()
 	model = train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2, data_sizes_2)
-	torch.save(model, 'best_152_v3.pt')
+	torch.save(model, '/home/ubuntu/jd_ai/models/best_50.pt')
