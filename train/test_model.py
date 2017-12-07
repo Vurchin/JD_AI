@@ -20,9 +20,9 @@ from subprocess import call
 
 plt.ion()
 
-model = torch.load('best_152_v2.pt')
+model = torch.load('/home/ubuntu/jd_ai/models/best_50.pt')
 
-data_dir = '/home/ubuntu/jd_ai/data'
+data_dir = '/home/ubuntu/jd_ai/data/test'
 
 preprocess_1 = transforms.Compose([
     			transforms.Resize(400),
@@ -38,10 +38,10 @@ preprocess_2 = transforms.Compose([
 
 counter = 0
 
-for file in os.listdir(data_dir + '/train/1'):
+for file in os.listdir(data_dir + '/val/1'):
 	print(counter)
 	counter = counter + 1
-	im = Image.open(data_dir + '/train/1/' + file)
+	im = Image.open(data_dir + '/val/1/' + file)
 	
 	im_tensor_1 = preprocess_1(im)
 	im_input_1 = Variable(im_tensor_1.cuda())
@@ -63,12 +63,12 @@ for file in os.listdir(data_dir + '/train/1'):
 	output = softmax(output)
 
 	for i in range(30):
-		output.data[0][i] = 0.7/29
+		output.data[0][i] = 0.5/29
 
-	output.data[0][idx.data] = 0.3
+	output.data[0][idx.data] = 0.5
 
 	for i in range(30):
-		result = open('train.csv', 'a')
+		result = open('result_v3.csv', 'a')
 		name = str(file)[:-4]
 		res = name + ',' + str(i+1) + ',' + str(format(output.data[0][i], '.10f')) + '\n'
 		result.write(res)

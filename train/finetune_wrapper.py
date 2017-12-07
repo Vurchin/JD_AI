@@ -22,23 +22,24 @@ model_sel = {
 	'resnet152': resnet.resnet152(pretrained=True),
 	'resnet101': resnet.resnet101(pretrained=True),
 	'resnet50': resnet.resnet50(pretrained=True),
+	'resnet18': resnet.resnet18(pretrained=True),
 }
 
 args = {
 	# arch params
-	'data_dir': '/home/ubuntu/jd_ai/data3',
+	'data_dir': '/home/ubuntu/jd_ai/data_crop',
 	'test_data_dir': '/home/ubuntu/jd_ai/data/test',
-	'model_name': 'resnet50',
+	'model_name': 'resnet101',
 	'input_size': 400,
 	'output_size': 30,
-	'batch_size': 32,
+	'batch_size': 16,
 	'requires_grad': True,
 	'use_gpu': torch.cuda.is_available(),
 
 	# train params
 	'epoch': 100,
 
-	'start_lr': 0.0025,
+	'start_lr': 0.01,
 	'momentum': 0.9,
 
 	'gamma': 0.1,
@@ -49,7 +50,7 @@ args = {
 
 data_trans = {
     'train': transforms.Compose([
-    	transforms.RandomRotation(degrees=20),
+    	transforms.RandomRotation(degrees=10),
     	transforms.RandomResizedCrop(args['input_size']),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
@@ -134,7 +135,6 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 			outputs = model(inputs)
 
 
-
 			if(args['model_name'] == 'inception'): # adjust inception auxiliary output
 				_, preds = torch.max(outputs[0].data, 1)
 				loss = sum((loss_func(out,labels) for out in outputs))
@@ -168,7 +168,7 @@ def train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2,
 	time_elapsed = time.time() - since
 	print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-	print('Best val Acc: {:4f}'.format(best_acc))
+	print('Best val Loss: {:4f}'.format(best_loss))
 
 	model.load_state_dict(best_model)
 	return model
@@ -194,6 +194,12 @@ def model_eval(model, dataloader_2, data_sizes_2):
 		outputs = model(inputs)
 
 		_, preds = torch.max(outputs.data, 1)
+
+		i = 0
+		for out in outputs:
+			out.data[preds[i]] += 5
+			i += 1
+		
 		loss = loss_func(outputs, labels)
 
 		running_acc += torch.sum(preds == labels.data)
@@ -231,4 +237,4 @@ if __name__ == '__main__':
 	dataloader_1, data_sizes_1, dataloader_2, data_sizes_2 = data_load()
 	model, optimizer, scheduler = model_tools()
 	model = train(model, optimizer, scheduler, dataloader_1, data_sizes_1, dataloader_2, data_sizes_2)
-	torch.save(model, '/home/ubuntu/jd_ai/models/best_50.pt')
+	torch.save(model, '/home/ubuntu/jd_ai/models/best_152_v2.pt')
